@@ -1,0 +1,49 @@
+/*  
+* Copyright (C) 2012 Texas Instruments Incorporated - http://www.ti.com/
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Purpose License Version 2 as
+* published by the Free Software Foundation
+*
+* Original from: github.com/jadonk/validation-scripts/blob/master/test-capemgr/ 
+*
+* Modified by Derek Molloy for the example on www.derekmolloy.ie
+* that maps GPIO pins for the example
+*/
+
+/dts-v1/;
+/plugin/;
+
+/{
+       compatible = "ti,beaglebone", "ti,beaglebone-black";
+       part-number = "EBB-GPIO-LED"; /* when we set this in the device tree overlay after compilation this is the name we target */
+									 /* to add to the DTO: cd to /lib/firmware/, then echo EBB-GPIO-LED > $SLOTS, to remove, echo -<number in overlay> > $SLOTS */ m
+       version = "00A0";
+
+       fragment@0 {
+             target = <&am33xx_pinmux>;
+            
+             __overlay__ {
+                  ebb_led: EBB_GPIO_LED {
+						pinctrl-single,pins = <
+                                0x044 0x07  // P9_11 PINS$17 GPIO1_17 = 49 Output Mode7 pulldown
+
+                                /* OUTPUT  GPIO(mode7) 0x07 pulldown, 0x17 pullup, 0x?f no pullup/down */
+								/* INPUT   GPIO(mode7) 0x27 pulldown, 0x37 pullup, 0x?f no pullup/down */
+						>;
+				};
+             };
+       };
+
+       fragment@1 {
+		target = <&ocp>;
+		__overlay__ {
+			gpio_helper {
+				compatible = "gpio-of-helper";
+				status = "okay";
+				pinctrl-names = "default";
+				pinctrl-0 = <&ebb_led>;
+			};
+		};
+	};
+};

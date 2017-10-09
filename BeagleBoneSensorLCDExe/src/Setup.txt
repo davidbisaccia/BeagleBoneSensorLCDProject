@@ -1,0 +1,105 @@
+TODO: Add $SLOTS setup
+QUESTIONS: 
+Do we need pull up/own resistors for MPL?  
+Do w have to set clock speed, it is 400kHz, which is the max for the bone, I believe it is handled automagically.
+
+
+----------------------------------------
+i2C in general
+/dev directory, ls i2* shows which ones are enabled.  There are three:
+0 is reserved for the hdmi, named I2C-0
+1 is normally on, named I2C-2 (confusing)
+2 is disabled unless turned on, named I2C-1 (confusing)
+
+to enable one:
+sudo sh -c "echo BB-I2C* > $SLOTS"
+
+Go back and read about the i2c tools, page 281.
+
+
+
+
+---------------------------------------
+---------------------------------------
+MPL 
+I2C
+400 khz max clock speed (SCL)
+Data line SDA
+3.3 V 
+I2C Address is 0xC0 
+The standard 7-bit I2C slave address is 0x60 or 1100000. 8-bit read is 0xC1, 8-bit write is 0xC0
+
+CTRL_REG1 (0x26)
+--------------------------------------
+00111001 :  0xB8
+00111001 :  0xB9 (trigger immediate read, don't forget to reset)
+
+Altimeter-Barometer mode.
+Default value: 0
+1: Part is in Altimeter Mode
+0: Part is in Barometer mode 
+
+RAW output mode.
+
+OS[2:0] Oversample Ratio. These bits select the oversampling ratio. Value is 2OS. The default value is 000 for a ratio of 1.
+
+RST, keep zero unless we want reset
+
+& OST, immediate scane if set to 1, will need to manually reset to zero.
+
+SBYB, 1 is active mode, 0 is standby
+
+
+--------------------------------------
+
+PT_DATA_CFG (0x13)
+The PT_DATA_CFG register configures the Pressure data, Temperature data and event flag generator.
+set to 111, enables everything or 0x07
+--------------------------------------
+
+use 0x00 to make sure we are ok to read.  Read the register, and then do
+if (STA & 0x08) == TRUE
+
+Then read the following:
+
+--------------------------------------
+Data:
+Pressure
+OUT_P_MSB = IIC_RegRead(SlaveAddressIIC, 0x01);
+OUT_P_CSB = IIC_RegRead(SlaveAddressIIC, 0x02);
+OUT_P_LSB = IIC_RegRead(SlaveAddressIIC, 0x03);
+Temperature
+OUT_T_MSB = IIC_RegRead(SlaveAddressIIC, 0x04);
+OUT_T_LSB = IIC_RegRead(SlaveAddressIIC, 0x05);
+
+
+
+
+
+
+---------------------------------------
+---------------------------------------
+Display LCD (2x20)
+
+Address for I2C: 0x50
+Already has pull up resistors (R7/R8).
+
+The use of this is one way communication, we will be writing to it.
+
+Plan on using I2C communication, means we will need to put a zero ohm jumper on R1 to put it in that communication mode
+
+Communication:
+0x00 to 0x07 displays usere defined characters, we are not using this.
+0x20 to 0x7F displays the standard set of characters
+0xA0 to 0xFD display characters and symbols that are factory-masked on the ST7066U controller, we are not using this
+
+0xFE is reserved to start a command, see table on page 7 of spec document for LCD.
+
+======================================
+VNC command:
+(I was in the /var/run/lightdm dir when executing this)
+sudo x11vnc -auth /var/run/lightdm/root/:0 -forever
+
+=======================================
+
+sudo apt-get install lib32z1 lib32ncurses5 lib32bz2-1.0 libstdc++6:i386 ia32-libs

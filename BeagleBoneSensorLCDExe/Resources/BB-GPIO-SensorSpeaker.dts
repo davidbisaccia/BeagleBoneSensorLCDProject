@@ -1,0 +1,96 @@
+/*  
+* Copyright (C) 2012 Texas Instruments Incorporated - http://www.ti.com/
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Purpose License Version 2 as
+* published by the Free Software Foundation
+//http://stackoverflow.com/questions/33549211/how-to-add-i2c-devices-on-the-beaglebone-black-using-device-tree-overlays
+*
+* Original from: github.com/jadonk/validation-scripts/blob/master/test-capemgr/ 
+*
+* Modified by Derek Molloy for the example on www.derekmolloy.ie
+* that maps GPIO pins for the example
+*/
+
+/dts-v1/;
+/plugin/;
+
+/{
+       compatible = "ti,beaglebone", "ti,beaglebone-black";
+       part-number = "BB-GPIO-SensorSpeaker";
+       version = "00A0";
+
+       fragment@0 {
+             target = <&am33xx_pinmux>; // this is a link to an already defined node in the device tree, so that node is overlayed with our modification
+            
+             __overlay__ {
+                  bb_sensorspeaker: BB_GPIO_SensorSpeaker {
+						pinctrl-single,pins = <
+                                0x070 0x37  // P9_11 PINS$28 GPIO0_30 = 30 Input Mode7 pullup , water sensor input, will be high when no water, and low when there is water
+                                0x074 0x07  // P9_13 PINS$29 GPIO0_31 = 31 Output Mode7 pulldown, speaker-buzer output, high makes buzzing noise, low does nothing
+  
+                               /* OUTPUT  GPIO(mode7) 0x07 pulldown, 0x17 pullup, 0x?f no pullup/down */
+							   /* INPUT   GPIO(mode7) 0x27 pulldown, 0x37 pullup, 0x?f no pullup/down */
+			>;
+		  };
+             };
+       };
+
+       fragment@1 {
+		target = <&ocp>;
+		__overlay__ {
+			gpio_helper {
+				compatible = "gpio-of-helper";
+				status = "okay";
+				pinctrl-names = "default";
+				pinctrl-0 = <&bb_sensorspeaker>;
+			};
+		};
+	};
+	
+        fragment@2 {
+        target = <&am33xx_pinmux>; // this is a link to an already defined node in the device tree, so that node is overlayed with our modification
+
+		__overlay__ {
+		  i2c1_pins: pinmux_i2c1_pins {
+			pinctrl-single,pins = <
+			  0x158 0x72 /* spi0_d1.i2c1_sda pin: 17*/ 
+			  0x15C 0x72 /* spi0_cs0.i2c1_sdl pin 18*/
+			>;
+		  };
+		};
+	};
+
+	fragment@3 {
+		target = <&i2c1>;
+
+		__overlay__ {
+				pinctrl-0 = <&i2c1_pins>;
+				clock-frequency = <100000>; //100 Khz, for LCD
+				status = "okay";
+		};
+        };
+	
+	fragment@4 {
+        target = <&am33xx_pinmux>; // this is a link to an already defined node in the device tree, so that node is overlayed with our modification
+
+		__overlay__ {
+		  i2c2_pins: pinmux_i2c2_pins {
+			pinctrl-single,pins = <
+			  0x17C 0x72 /* spi0_d1.i2c1_sda pin: 19 */ 
+			  0x178 0x72 /* spi0_cs0.i2c1_sdl pin: 20 */
+			>;
+		  };
+		};
+	};
+
+	fragment@5 {
+        target = <&i2c2>;
+
+		__overlay__ {
+				pinctrl-0 = <&i2c2_pins>;
+				clock-frequency = <400000>; //400 Khz for Temperature-Pressure Sensor
+				status = "okay";
+		};
+        };
+};
